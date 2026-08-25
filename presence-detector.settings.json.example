@@ -5,7 +5,7 @@
   "mqtt_password": "<PASSWORD>",
   "mqtt_retain_state": true,
   "interfaces": ["hostapd.wlan0", "hostapd.wlan1"],
-  "filter_is_denylist": true,
+  "filter_is_denylist": false,
   "filter": ["01:23:45:67:89:ab"],
   "params": {
     "XX:YY:DD:AA:TT:QQ": {

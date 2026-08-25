@@ -1,6 +1,7 @@
 # OpenWRT Home Assistant device tracker
 
 ## Table of contents
+* [This fork: shell version](#this-fork-shell-version)
 * [What is this?](#what-is-this)
 * [Installation](#installation)
    * [Steps to perform on your OpenWRT device](#steps-to-perform-on-your-openwrt-device)
@@ -11,6 +12,19 @@
    * [Linking multiple devices to one person](#linking-multiple-devices-to-one-person)
 * [Migrating from version 2.X to 3.X](#migrating-from-version-2x-to-3x)
 * [Troubleshooting](#troubleshooting)
+
+## This fork: shell version
+This fork replaces the Python implementation with a single shell script, `presence-detector.sh`.
+The original needs about 4 MB of Python packages, which does not fit comfortably on routers with small overlay flash.
+The shell version needs only `mosquitto-client-nossl` (75 KB) plus tools that ship with OpenWrt (`ubus`, `jsonfilter`, `logger`).
+
+Differences from upstream:
+* Allowlist only. Set `filter_is_denylist` to `false` and list the MAC addresses to track in `filter`. The script refuses to start otherwise.
+* No publish-ack queue. Every MQTT message is published retained, and the script re-publishes discovery config and state for all tracked devices every `fallback_sync_interval` seconds (default 300; 0 no longer disables it). Broker outages and Home Assistant restarts heal at the next sync.
+* The settings file format is unchanged. Keys the shell version does not use (`ap_name`, `source_type`, `debug`, ...) are ignored.
+* Removing a MAC from `filter` does not remove the entity from Home Assistant, because its discovery config and last state stay retained on the broker. Run `presence-detector.sh forget <mac>` to clear both and delete the entity.
+
+The installation steps below are adjusted for the shell version. Everything from [Steps to perform in Home Assistant](#steps-to-perform-in-home-assistant) onward applies unchanged.
 
 ## What is this?
 This script is a Wi-Fi device tracker that runs on OpenWRT devices.
@@ -25,11 +39,11 @@ It does this by adding all events to a queue and making sure every event is acce
 
 ### Steps to perform on your OpenWRT device
 * Log in to your OpenWRT device
-* Place presence-detector.py and presence-detector.settings.json somewhere persistent (I use /etc/config)
-* Make presence-detector.py executable: chmod +x presence-detector.py
+* Place presence-detector.sh and presence-detector.settings.json somewhere persistent (I use /etc/config)
+* Make presence-detector.sh executable: chmod +x presence-detector.sh
 * Place the init-script from this repo's init.d directory into /etc/init.d on your device
 * Make the init-script executable: chmod +x /etc/init.d/presence-detector
-* Install python + deps: apk update && apk add python3-light python3-paho-mqtt python3-codecs python3-urllib python3-logging.
+* Install the MQTT client: apk update && apk add mosquitto-client-nossl
 * Adjust /etc/config/presence-detector.settings.json to your needs (see below)
 * run 'service presence-detector enable' to enable the service at startup
 * run 'service presence-detector start', or simply reboot
