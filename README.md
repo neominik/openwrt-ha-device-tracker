@@ -47,6 +47,11 @@ It does this by adding all events to a queue and making sure every event is acce
 * Adjust /etc/config/presence-detector.settings.json to your needs (see below)
 * run 'service presence-detector enable' to enable the service at startup
 * run 'service presence-detector start', or simply reboot
+* Make it survive sysupgrades. Files in /etc/config are kept, but the init-script and its enable links are not:
+  ```
+  printf "%s\n" /etc/init.d/presence-detector /etc/rc.d/S90presence-detector /etc/rc.d/K1presence-detector >> /etc/sysupgrade.conf
+  ```
+  Upgrade with Attended Sysupgrade (LuCI or `owut`) so `mosquitto-client-nossl` is built into the new image. After a plain sysupgrade, reinstall it with `apk add mosquitto-client-nossl`.
 
 ### Steps to perform in Home Assistant
 * Install the Mosquitto MQTT broker in Home Assistant or install one yourself. If you run HassOS, this can be done by installing the 'Mosquitto' add-on.

@@ -57,13 +57,17 @@ fi
     exit 1
 }
 
-# At boot this service can start before hostapd registers on ubus; without
-# this retry, auto-detection would silently settle on zero interfaces.
+# At boot this service can start before the radios are up, and they come up
+# one at a time. Wait until netifd reports every enabled radio up, otherwise
+# auto-detection would settle on zero or only the first interfaces.
 IFACES=$(cfg '.interfaces[*]')
 while [ -z "$IFACES" ]; do
-    IFACES=$(ubus list 'hostapd.*')
+    case "$(ubus call network.wireless status 2>/dev/null | jsonfilter -e '@[@.disabled=false].up')" in
+        ""|*false*) ;;
+        *) IFACES=$(ubus list 'hostapd.*' 2>/dev/null) ;;
+    esac
     [ -n "$IFACES" ] && break
-    log "no hostapd interfaces on ubus yet, retrying in 5s" warn
+    log "Wi-Fi radios not up yet, retrying in 5s" warn
     sleep 5
 done
 
